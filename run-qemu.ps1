@@ -1,0 +1,1 @@
+& "C:\Program Files\qemu\qemu-system-x86_64.exe" -L "C:\Program Files\qemu" -bios ".\OVMF.fd" -drive file=fat:rw:build
