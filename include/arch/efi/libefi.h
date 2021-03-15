@@ -13,6 +13,14 @@ namespace efi
     #define PROTOCOL_METHOD(name, arguments) \
         typedef status (*name)arguments;
 
+    #define EFI_SUCCESS     0
+    #define EFI_ERROR(code) (code != EFI_SUCCESS)
+
+    #define EFI_PAGE_MASK               0xFFF
+    #define EFI_PAGE_SHIFT		        12
+    #define EFI_PAGE_SIZE		        (1UL << EFI_PAGE_SHIFT)
+    #define EFI_SIZE_TO_PAGES(size)     (((size) >> EFI_PAGE_SHIFT) + (((size) & EFI_PAGE_MASK) ? 1 : 0))
+
     // -- Core Types -- //
     typedef uint8_t boolean;
     typedef uint16_t char16;
@@ -22,6 +30,35 @@ namespace efi
 
     typedef uint64_t status;
     typedef uint64_t tpl;
+    typedef uint64_t physical_address;
+    typedef uint64_t virtual_address;
+
+    typedef enum allocate_type
+    {
+        allocate_any_pages,
+        allocate_max_address,
+        allocate_address,
+        max_allocate_type
+    } allocate_type;
+
+    typedef enum memory_type
+    {
+        reserved_memory_type,
+        loader_code,
+        loader_data,
+        boot_services_code,
+        boot_services_data,
+        runtime_services_code,
+        runtime_services_data,
+        conventional_memory,
+        unusable_memory,
+        acpi_memory_nvs,
+        memory_mapped_io,
+        memory_mapped_io_port_space,
+        pal_code,
+        persistant_memory,
+        max_memory_type
+    } memory_type;
 
     typedef struct guid
     {
@@ -40,6 +77,8 @@ namespace efi
         uint32_t reserved;
     } table_header;
 
+    typedef void (*ap_procedure)(void *buffer);
+
     // -- Protocol definitions -- //
     // TODO: IMPLEMENT
     typedef struct simple_text_input_protocol simple_text_input_protocol;
@@ -54,15 +93,33 @@ namespace efi
         text_string_t output_string;
     } simple_text_output_protocol;
 
+    PROTOCOL_START(mp_services);
+    PROTOCOL_METHOD(mp_get_number_of_processors, (struct mp_services* _this, uint64_t *number_of_processors, uint64_t *number_of_enabled_processors))
+    PROTOCOL_METHOD(mp_startup_all_aps, (struct mp_services* _this, ap_procedure procedure, boolean single_thread, event wait_event, uint64_t timeout_in_microseconds, void* procedure_argument, uint64_t** failed_cpu_list))
+    PROTOCOL_METHOD(mp_whoami, (struct mp_services* _this, uint64_t* processor_number))
+    typedef struct mp_services
+    {
+        mp_get_number_of_processors get_number_of_processors;
+        mp_get_number_of_processors fill1;
+        mp_startup_all_aps startup_all_aps;
+        mp_get_number_of_processors fill2;
+        mp_get_number_of_processors fill3;
+        mp_get_number_of_processors fill4;
+        mp_whoami whoami;
+    } mp_services;
+
     PROTOCOL_START(boot_services)
     PROTOCOL_METHOD(bs_raise_tpl, (tpl new_tpl))
+    PROTOCOL_METHOD(bs_allocate_pages, (allocate_type type, uint64_t memory_type, uint64_t pages, physical_address *memory))
+    PROTOCOL_METHOD(bs_free_pages, (physical_address memory, uint64_t pages))
     PROTOCOL_METHOD(bs_locate_protocol, (guid* protocol, void* registration, void** interface))
     typedef struct boot_services
     {
+        table_header header;
         bs_raise_tpl raise_tpl;
         bs_raise_tpl fill1;
-        bs_raise_tpl fill2;
-        bs_raise_tpl fill3;
+        bs_allocate_pages allocate_pages;
+        bs_free_pages free_pages;
         bs_raise_tpl fill4;
         bs_raise_tpl fill5;
         bs_raise_tpl fill6;
@@ -102,6 +159,7 @@ namespace efi
     PROTOCOL_START(runtime_services)
     typedef struct runtime_services
     {
+        table_header header;
     } runtime_services;
 
     // -- System Table -- //
@@ -122,3 +180,5 @@ namespace efi
         void* configuration_table;
     } system_table;
 }
+
+extern efi::system_table* system_table;
