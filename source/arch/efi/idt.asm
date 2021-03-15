@@ -40,19 +40,19 @@ interrupt_handlers:
         interrupt_stub_no_err index
     %endrep
 
-    nop
-    nop
+    interrupt_stub_err index
+    interrupt_stub_no_err index
 
     %rep 5
-        nop
+        interrupt_stub_err index
     %endrep
 
     %rep 2
-        nop
+        interrupt_stub_no_err index
     %endrep
 
-    nop
+    interrupt_stub_err index
 
     %rep 238
-        nop
+        interrupt_stub_no_err index
     %endrep
